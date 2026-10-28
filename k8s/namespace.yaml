@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: library-management
+  labels:
+    app.kubernetes.io/name: library-management-system
+    app.kubernetes.io/part-of: library-system

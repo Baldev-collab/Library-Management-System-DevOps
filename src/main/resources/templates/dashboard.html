@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('Dashboard - Library Management System')}"></head>
+<body>
+
+    <!-- Sidebar -->
+    <div th:replace="~{fragments/layout :: sidebar('dashboard')}"></div>
+
+    <!-- Main Content -->
+    <main class="app-main">
+        <!-- Topbar -->
+        <div th:replace="~{fragments/layout :: topbar('Library Management Dashboard')}"></div>
+
+        <div class="app-content">
+            <!-- Flash Message Alerts -->
+            <div th:replace="~{fragments/layout :: alerts}"></div>
+
+            <!-- Stats Metric Cards -->
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="stat-card primary">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="stat-label">Total Books</span>
+                            <div class="stat-icon primary">
+                                <i class="bi bi-book"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" th:text="${stats.totalBooks}">0</div>
+                        <small class="text-muted"><span th:text="${stats.totalTitles}">0</span> distinct catalog titles</small>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="stat-card success">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="stat-label">Available Copies</span>
+                            <div class="stat-icon success">
+                                <i class="bi bi-check-circle"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value text-success" th:text="${stats.availableBooks}">0</div>
+                        <small class="text-muted">Ready for loan issuance</small>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="stat-card info">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="stat-label">Currently Issued</span>
+                            <div class="stat-icon info">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value text-info" th:text="${stats.issuedBooks}">0</div>
+                        <small class="text-muted">Active patron loans</small>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="stat-card warning">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="stat-label">Total Members</span>
+                            <div class="stat-icon warning">
+                                <i class="bi bi-people"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" th:text="${stats.registeredMembers}">0</div>
+                        <small class="text-muted"><span th:text="${stats.activeMembers}">0</span> active accounts</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Overdue Alert Banner if overdue loans exist -->
+            <div th:if="${stats.overdueIssues > 0}" class="custom-card border-danger mb-4">
+                <div class="custom-card-header bg-danger-subtle text-danger py-2 px-3">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-exclamation-octagon-fill me-2"></i>
+                        Attention: <span th:text="${stats.overdueIssues}">0</span> Overdue Book Loan(s) Detected
+                    </h6>
+                    <span class="badge bg-danger fs-6" th:text="'Late Fees: $' + ${#numbers.formatDecimal(stats.totalLateFees, 1, 2)}">Fees</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Book Title</th>
+                                <th>Borrower</th>
+                                <th>Due Date</th>
+                                <th>Accrued Fee</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="overdue : ${overdueIssues}">
+                                <td class="fw-semibold" th:text="${overdue.book.title}">Effective Java</td>
+                                <td>
+                                    <span th:text="${overdue.member.name}">Alice Johnson</span>
+                                    <small class="text-muted d-block" th:text="${overdue.member.memberCode}">LIB-MEM-001</small>
+                                </td>
+                                <td class="text-danger fw-semibold" th:text="${overdue.dueDate}">2026-10-20</td>
+                                <td class="text-danger fw-bold" th:text="'$' + ${#numbers.formatDecimal(overdue.lateFee, 1, 2)}">$12.00</td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-danger"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#returnModal"
+                                            th:attr="data-issue-id=${overdue.id},
+                                                     data-book-title=${overdue.book.title},
+                                                     data-member-name=${overdue.member.name},
+                                                     data-due-date=${overdue.dueDate},
+                                                     data-late-fee=${overdue.lateFee}">
+                                        <i class="bi bi-arrow-return-left"></i> Return Book
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Quick Actions & Recent Activity -->
+            <div class="row g-4">
+                <!-- Left: Recent Loans -->
+                <div class="col-12 col-xl-8">
+                    <div class="custom-card">
+                        <div class="custom-card-header">
+                            <h5 class="custom-card-title">
+                                <i class="bi bi-clock-history text-primary"></i>
+                                Recent Book Loans
+                            </h5>
+                            <a th:href="@{/issues}" class="btn btn-sm btn-link text-decoration-none">View All Issues &rarr;</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-custom align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Book Title</th>
+                                        <th>Member</th>
+                                        <th>Issue Date</th>
+                                        <th>Due Date</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:if="${#lists.isEmpty(recentIssues)}">
+                                        <td colspan="6" class="text-center text-muted py-4">
+                                            <i class="bi bi-inbox fs-3 d-block mb-1"></i>
+                                            No recent book issues recorded.
+                                        </td>
+                                    </tr>
+                                    <tr th:each="issue : ${recentIssues}">
+                                        <td>
+                                            <a th:href="@{'/books/view/' + ${issue.book.id}}" class="fw-semibold text-dark text-decoration-none" th:text="${issue.book.title}">Clean Code</a>
+                                            <small class="text-muted d-block" th:text="'ISBN: ' + ${issue.book.isbn}">ISBN</small>
+                                        </td>
+                                        <td>
+                                            <span th:text="${issue.member.name}">Alice Johnson</span>
+                                            <small class="text-muted d-block" th:text="${issue.member.email}">email</small>
+                                        </td>
+                                        <td th:text="${issue.issueDate}">2026-10-25</td>
+                                        <td th:text="${issue.dueDate}">2026-11-08</td>
+                                        <td>
+                                            <span th:if="${issue.status == 'AVAILABLE' or issue.status == 'RETURNED'}" class="badge-status badge-returned">
+                                                <i class="bi bi-check2"></i> Returned
+                                            </span>
+                                            <span th:if="${issue.status == 'ISSUED'}" class="badge-status badge-issued">
+                                                <i class="bi bi-hourglass-split"></i> Issued
+                                            </span>
+                                            <span th:if="${issue.status == 'OVERDUE'}" class="badge-status badge-overdue">
+                                                <i class="bi bi-exclamation-triangle-fill"></i> Overdue
+                                            </span>
+                                        </td>
+                                        <td class="text-end">
+                                            <button th:if="${issue.status != 'RETURNED'}"
+                                                    class="btn btn-sm btn-outline-primary"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#returnModal"
+                                                    th:attr="data-issue-id=${issue.id},
+                                                             data-book-title=${issue.book.title},
+                                                             data-member-name=${issue.member.name},
+                                                             data-due-date=${issue.dueDate},
+                                                             data-late-fee=${issue.lateFee}">
+                                                Return
+                                            </button>
+                                            <span th:if="${issue.status == 'RETURNED'}" class="text-muted small">
+                                                <i class="bi bi-check-lg text-success"></i> Done
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Quick Operations -->
+                <div class="col-12 col-xl-4">
+                    <div class="custom-card">
+                        <div class="custom-card-header">
+                            <h5 class="custom-card-title">
+                                <i class="bi bi-lightning-charge-fill text-warning"></i>
+                                Quick Operations
+                            </h5>
+                        </div>
+                        <div class="custom-card-body">
+                            <div class="d-grid gap-2">
+                                <a th:href="@{/issues/new}" class="btn btn-primary-custom justify-content-center py-2">
+                                    <i class="bi bi-plus-circle-fill"></i> Issue Book to Member
+                                </a>
+                                <a th:href="@{/books/new}" class="btn btn-secondary-custom justify-content-center py-2">
+                                    <i class="bi bi-journal-plus"></i> Add New Book Title
+                                </a>
+                                <a th:href="@{/members/new}" class="btn btn-secondary-custom justify-content-center py-2">
+                                    <i class="bi bi-person-plus-fill"></i> Register New Member
+                                </a>
+                                <a th:href="@{/issues?status=OVERDUE}" class="btn btn-outline-danger justify-content-center py-2">
+                                    <i class="bi bi-clock-history"></i> Review Overdue Loans
+                                </a>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <div class="p-3 bg-light rounded">
+                                <h6 class="fw-bold mb-2 small text-uppercase text-secondary">
+                                    <i class="bi bi-shield-check text-success me-1"></i> System Status
+                                </h6>
+                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                    <span>Database:</span>
+                                    <span class="text-success fw-semibold">MySQL 8.4 Connected</span>
+                                </div>
+                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                    <span>Deployment:</span>
+                                    <span class="text-primary fw-semibold">Docker & K8s Ready</span>
+                                </div>
+                                <div class="d-flex justify-content-between small text-muted">
+                                    <span>Late Fee Rule:</span>
+                                    <span class="text-dark fw-semibold">$2.00 / day overdue</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Return Modal -->
+    <div th:replace="~{fragments/layout :: returnModal}"></div>
+
+    <!-- Scripts -->
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

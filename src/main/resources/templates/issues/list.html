@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('Issue & Returns - Library Management System')}"></head>
+<body>
+
+    <!-- Sidebar -->
+    <div th:replace="~{fragments/layout :: sidebar('issues')}"></div>
+
+    <main class="app-main">
+        <!-- Topbar -->
+        <div th:replace="~{fragments/layout :: topbar('Circulation & Book Loans')}"></div>
+
+        <div class="app-content">
+            <!-- Flash Message Alerts -->
+            <div th:replace="~{fragments/layout :: alerts}"></div>
+
+            <!-- Page Header -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div>
+                    <h3 class="fw-bold mb-1">Book Loans & Circulation</h3>
+                    <p class="text-muted mb-0 small">Track book issues, due dates, returns, and overdue penalties.</p>
+                </div>
+                <a th:href="@{/issues/new}" class="btn btn-primary-custom">
+                    <i class="bi bi-plus-lg"></i> Issue New Book
+                </a>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="search-container">
+                <form th:action="@{/issues}" method="get" class="row g-3 align-items-end">
+                    <div class="col-12 col-md-7">
+                        <label for="queryInput" class="form-label">Search Loans</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control" id="queryInput" name="query"
+                                   placeholder="Search by book title, ISBN, member name, or member code..."
+                                   th:value="${selectedQuery}">
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <label for="statusSelect" class="form-label">Loan Status</label>
+                        <select class="form-select" id="statusSelect" name="status">
+                            <option value="">All Statuses</option>
+                            <option value="ISSUED" th:selected="${selectedStatus == 'ISSUED'}">Active (Issued)</option>
+                            <option value="OVERDUE" th:selected="${selectedStatus == 'OVERDUE'}">Overdue</option>
+                            <option value="RETURNED" th:selected="${selectedStatus == 'RETURNED'}">Returned</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-2 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary-custom flex-grow-1 justify-content-center">
+                            Filter
+                        </button>
+                        <a th:href="@{/issues}" class="btn btn-secondary-custom" title="Reset Filters">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Issues Table -->
+            <div class="custom-card">
+                <div class="table-responsive">
+                    <table class="table table-custom align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Book Title</th>
+                                <th>Borrower</th>
+                                <th>Issue Date</th>
+                                <th>Due Date</th>
+                                <th>Return Date</th>
+                                <th>Status</th>
+                                <th>Late Fee</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:if="${#lists.isEmpty(issues)}">
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="bi bi-arrow-left-right fs-1 d-block mb-2 text-secondary"></i>
+                                    <h5>No circulation records found</h5>
+                                    <p class="small mb-3">Adjust your search filters or issue a book to a member.</p>
+                                    <a th:href="@{/issues/new}" class="btn btn-sm btn-primary-custom">Issue Book</a>
+                                </td>
+                            </tr>
+                            <tr th:each="issue : ${issues}">
+                                <td>
+                                    <a th:href="@{'/books/view/' + ${issue.book.id}}" class="fw-bold text-dark text-decoration-none" th:text="${issue.book.title}">Effective Java</a>
+                                    <div class="small text-muted" th:text="'ISBN: ' + ${issue.book.isbn}">ISBN</div>
+                                </td>
+                                <td>
+                                    <a th:href="@{'/members/view/' + ${issue.member.id}}" class="fw-semibold text-dark text-decoration-none" th:text="${issue.member.name}">Alice Johnson</a>
+                                    <div class="small text-muted" th:text="${issue.member.memberCode}">LIB-MEM-001</div>
+                                </td>
+                                <td th:text="${issue.issueDate}">2026-10-20</td>
+                                <td th:text="${issue.dueDate}" th:classappend="${issue.status == 'OVERDUE'} ? 'text-danger fw-bold' : ''">2026-11-03</td>
+                                <td th:text="${issue.returnDate != null ? issue.returnDate : '-'}">-</td>
+                                <td>
+                                    <span th:if="${issue.status == 'RETURNED'}" class="badge-status badge-returned">
+                                        <i class="bi bi-check2"></i> Returned
+                                    </span>
+                                    <span th:if="${issue.status == 'ISSUED'}" class="badge-status badge-issued">
+                                        <i class="bi bi-hourglass-split"></i> Issued
+                                    </span>
+                                    <span th:if="${issue.status == 'OVERDUE'}" class="badge-status badge-overdue">
+                                        <i class="bi bi-exclamation-triangle-fill"></i> Overdue
+                                    </span>
+                                </td>
+                                <td>
+                                    <span th:if="${issue.lateFee != null && issue.lateFee > 0}" class="text-danger fw-bold" th:text="'$' + ${#numbers.formatDecimal(issue.lateFee, 1, 2)}">$12.00</span>
+                                    <span th:unless="${issue.lateFee != null && issue.lateFee > 0}" class="text-muted">$0.00</span>
+                                </td>
+                                <td class="text-end">
+                                    <button th:if="${issue.status != 'RETURNED'}"
+                                            class="btn btn-sm btn-outline-primary"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#returnModal"
+                                            th:attr="data-issue-id=${issue.id},
+                                                     data-book-title=${issue.book.title},
+                                                     data-member-name=${issue.member.name},
+                                                     data-due-date=${issue.dueDate},
+                                                     data-late-fee=${issue.lateFee}">
+                                        <i class="bi bi-arrow-return-left"></i> Return Book
+                                    </button>
+                                    <span th:if="${issue.status == 'RETURNED'}" class="text-muted small">
+                                        <i class="bi bi-check-circle-fill text-success"></i> Completed
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Return Modal -->
+    <div th:replace="~{fragments/layout :: returnModal}"></div>
+
+    <!-- Scripts -->
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

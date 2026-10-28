@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('Error - Library Management System')}"></head>
+<body>
+
+    <!-- Sidebar -->
+    <div th:replace="~{fragments/layout :: sidebar('dashboard')}"></div>
+
+    <main class="app-main">
+        <div th:replace="~{fragments/layout :: topbar('Application Notice')}"></div>
+
+        <div class="app-content d-flex align-items-center justify-content-center" style="min-height: 70vh;">
+            <div class="text-center" style="max-width: 540px;">
+                <div class="mb-3">
+                    <span class="display-1 fw-bold text-danger" th:text="${errorCode != null ? errorCode : '500'}">500</span>
+                </div>
+                <h4 class="fw-bold mb-2 text-dark" th:text="${errorTitle != null ? errorTitle : 'Unexpected Error Occurred'}">Error</h4>
+                <p class="text-muted mb-4" th:text="${errorMessage != null ? errorMessage : 'The requested resource could not be found or an unexpected condition was encountered.'}">
+                    Error description goes here.
+                </p>
+                <div class="d-flex justify-content-center gap-2">
+                    <a th:href="@{/dashboard}" class="btn btn-primary-custom">
+                        <i class="bi bi-house-door"></i> Return to Dashboard
+                    </a>
+                    <a href="javascript:history.back()" class="btn btn-secondary-custom">
+                        <i class="bi bi-arrow-left"></i> Go Back
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

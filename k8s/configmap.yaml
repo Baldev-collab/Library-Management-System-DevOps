@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: library-app-config
+  namespace: library-management
+  labels:
+    app.kubernetes.io/name: library-management-system
+    app.kubernetes.io/component: backend
+data:
+  DB_URL: "jdbc:mysql://library-mysql.library-management.svc.cluster.local:3306/librarydb?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+  PORT: "8080"

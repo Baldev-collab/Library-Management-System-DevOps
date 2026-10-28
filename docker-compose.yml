@@ -1,0 +1,53 @@
+services:
+  # MySQL 8.4 Database Service
+  library-mysql:
+    image: mysql:8.4
+    container_name: library-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-librarydb}
+      MYSQL_USER: ${MYSQL_USER:-libraryuser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-librarypass}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+    ports:
+      - "${MYSQL_LOCAL_PORT:-3307}:3306"
+    volumes:
+      - library_mysql_data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - library-network
+
+  # Library Management Spring Boot Application
+  library-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: library-management-system:latest
+    container_name: library-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8082}:8080"
+    environment:
+      DB_URL: jdbc:mysql://library-mysql:3306/${MYSQL_DATABASE:-librarydb}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USERNAME: ${MYSQL_USER:-libraryuser}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-librarypass}
+      PORT: 8080
+    depends_on:
+      library-mysql:
+        condition: service_healthy
+    networks:
+      - library-network
+
+volumes:
+  library_mysql_data:
+    name: library_mysql_data
+
+networks:
+  library-network:
+    name: library-network

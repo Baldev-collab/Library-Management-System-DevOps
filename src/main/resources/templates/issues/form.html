@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('Issue Book - LibMaster')}"></head>
+<body>
+
+    <!-- Sidebar -->
+    <div th:replace="~{fragments/layout :: sidebar('issues')}"></div>
+
+    <main class="app-main">
+        <!-- Topbar -->
+        <div th:replace="~{fragments/layout :: topbar('Circulation Desk - Issue Book')}"></div>
+
+        <div class="app-content">
+            <!-- Flash Message Alerts -->
+            <div th:replace="~{fragments/layout :: alerts}"></div>
+
+            <div class="row justify-content-center">
+                <div class="col-12 col-lg-8">
+                    <div class="custom-card">
+                        <div class="custom-card-header">
+                            <h5 class="custom-card-title">
+                                <i class="bi bi-box-arrow-up-right text-primary"></i>
+                                New Book Loan Issuance
+                            </h5>
+                            <a th:href="@{/issues}" class="btn btn-sm btn-secondary-custom">
+                                <i class="bi bi-arrow-left"></i> Back to Loans
+                            </a>
+                        </div>
+                        <div class="custom-card-body p-4">
+                            <!-- Alert if no books are available -->
+                            <div th:if="${#lists.isEmpty(availableBooks)}" class="alert alert-warning d-flex align-items-center mb-4">
+                                <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+                                <div>
+                                    <strong>No Available Books!</strong>
+                                    All books in the catalog are currently on loan or out of stock.
+                                    <a th:href="@{/books/new}" class="alert-link">Add more book copies</a>.
+                                </div>
+                            </div>
+
+                            <!-- Alert if no active members exist -->
+                            <div th:if="${#lists.isEmpty(activeMembers)}" class="alert alert-warning d-flex align-items-center mb-4">
+                                <i class="bi bi-person-x-fill fs-4 me-3"></i>
+                                <div>
+                                    <strong>No Active Members!</strong>
+                                    There are currently no active registered patrons.
+                                    <a th:href="@{/members/new}" class="alert-link">Register a member first</a>.
+                                </div>
+                            </div>
+
+                            <form th:action="@{/issues/save}"
+                                  th:object="${issueRequest}"
+                                  method="post"
+                                  novalidate>
+
+                                <!-- Book Selection -->
+                                <div class="mb-3">
+                                    <label for="bookId" class="form-label">
+                                        Select Book to Issue <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select"
+                                            id="bookId"
+                                            th:field="*{bookId}"
+                                            th:classappend="${#fields.hasErrors('bookId')} ? 'is-invalid' : ''"
+                                            required>
+                                        <option value="">-- Choose an available book from catalog --</option>
+                                        <option th:each="book : ${availableBooks}"
+                                                th:value="${book.id}"
+                                                th:text="${book.title} + ' by ' + ${book.author} + ' (' + ${book.availableCopies} + ' copies available)'">
+                                            Effective Java by Joshua Bloch (4 copies available)
+                                        </option>
+                                    </select>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('bookId')}" th:errors="*{bookId}">
+                                        Please select a book.
+                                    </div>
+                                    <small class="text-muted">Only titles with available copies (> 0) are listed here.</small>
+                                </div>
+
+                                <!-- Member Selection -->
+                                <div class="mb-3">
+                                    <label for="memberId" class="form-label">
+                                        Select Borrower / Member <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select"
+                                            id="memberId"
+                                            th:field="*{memberId}"
+                                            th:classappend="${#fields.hasErrors('memberId')} ? 'is-invalid' : ''"
+                                            required>
+                                        <option value="">-- Choose an active member --</option>
+                                        <option th:each="member : ${activeMembers}"
+                                                th:value="${member.id}"
+                                                th:text="${member.name} + ' (' + ${member.memberCode} + ' - ' + ${member.email} + ')'">
+                                            Alice Johnson (LIB-MEM-001)
+                                        </option>
+                                    </select>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('memberId')}" th:errors="*{memberId}">
+                                        Please select a member.
+                                    </div>
+                                </div>
+
+                                <!-- Issue Date & Due Date -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-6">
+                                        <label for="issueDate" class="form-label">
+                                            Issue Date <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date"
+                                               class="form-control"
+                                               id="issueDate"
+                                               th:field="*{issueDate}"
+                                               th:classappend="${#fields.hasErrors('issueDate')} ? 'is-invalid' : ''"
+                                               required>
+                                        <div class="invalid-feedback" th:if="${#fields.hasErrors('issueDate')}" th:errors="*{issueDate}">
+                                            Issue date is required.
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 col-md-6">
+                                        <label for="dueDate" class="form-label">
+                                            Due Date <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date"
+                                               class="form-control"
+                                               id="dueDate"
+                                               th:field="*{dueDate}"
+                                               th:classappend="${#fields.hasErrors('dueDate')} ? 'is-invalid' : ''"
+                                               required>
+                                        <div class="invalid-feedback" th:if="${#fields.hasErrors('dueDate')}" th:errors="*{dueDate}">
+                                            Due date is required.
+                                        </div>
+                                        <small class="text-muted">Default loan duration is 14 days.</small>
+                                    </div>
+                                </div>
+
+                                <!-- Notes -->
+                                <div class="mb-4">
+                                    <label for="notes" class="form-label">Loan Remarks / Notes (Optional)</label>
+                                    <textarea class="form-control"
+                                              id="notes"
+                                              th:field="*{notes}"
+                                              rows="3"
+                                              placeholder="Course requirement, special loan terms, condition notes..."></textarea>
+                                </div>
+
+                                <!-- Form Actions -->
+                                <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                                    <a th:href="@{/issues}" class="btn btn-secondary-custom">Cancel</a>
+                                    <button type="submit"
+                                            class="btn btn-primary-custom"
+                                            th:disabled="${#lists.isEmpty(availableBooks) or #lists.isEmpty(activeMembers)}">
+                                        <i class="bi bi-check-circle-fill"></i> Confirm Book Loan
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

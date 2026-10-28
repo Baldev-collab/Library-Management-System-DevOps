@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header(${book.title} + ' - Book Details')}"></head>
+<body>
+
+    <!-- Sidebar -->
+    <div th:replace="~{fragments/layout :: sidebar('books')}"></div>
+
+    <main class="app-main">
+        <!-- Topbar -->
+        <div th:replace="~{fragments/layout :: topbar('Book Inventory Details')}"></div>
+
+        <div class="app-content">
+            <!-- Flash Alerts -->
+            <div th:replace="~{fragments/layout :: alerts}"></div>
+
+            <!-- Header and Navigation -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div>
+                    <a th:href="@{/books}" class="text-decoration-none text-muted small">
+                        &larr; Back to Catalog
+                    </a>
+                    <h3 class="fw-bold mb-0 mt-1" th:text="${book.title}">Effective Java</h3>
+                </div>
+                <div class="d-flex gap-2">
+                    <a th:if="${book.availableCopies > 0}"
+                       th:href="@{'/issues/new?bookId=' + ${book.id}}"
+                       class="btn btn-primary-custom">
+                        <i class="bi bi-arrow-up-right-circle"></i> Issue This Book
+                    </a>
+                    <a th:href="@{'/books/edit/' + ${book.id}}" class="btn btn-secondary-custom">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+                </div>
+            </div>
+
+            <!-- Book Overview Card -->
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-lg-8">
+                    <div class="custom-card">
+                        <div class="custom-card-header">
+                            <h5 class="custom-card-title">
+                                <i class="bi bi-info-circle text-primary"></i> Specification & Overview
+                            </h5>
+                            <span th:if="${book.status == 'AVAILABLE'}" class="badge-status badge-available">
+                                <i class="bi bi-check-circle-fill"></i> Available
+                            </span>
+                            <span th:if="${book.status == 'OUT_OF_STOCK'}" class="badge-status badge-outofstock">
+                                <i class="bi bi-dash-circle-fill"></i> Out of Stock
+                            </span>
+                        </div>
+                        <div class="custom-card-body p-4">
+                            <div class="row g-3">
+                                <div class="col-12 col-sm-6">
+                                    <div class="text-muted small">Author(s)</div>
+                                    <div class="fw-bold fs-6 text-dark" th:text="${book.author}">Joshua Bloch</div>
+                                </div>
+                                <div class="col-12 col-sm-6">
+                                    <div class="text-muted small">Category</div>
+                                    <div><span class="badge bg-light text-dark border" th:text="${book.category}">Programming</span></div>
+                                </div>
+                                <div class="col-12 col-sm-6">
+                                    <div class="text-muted small">ISBN</div>
+                                    <code><span class="fs-6" th:text="${book.isbn}">978-0134685991</span></code>
+                                </div>
+                                <div class="col-12 col-sm-6">
+                                    <div class="text-muted small">Availability</div>
+                                    <div class="fw-bold fs-6" th:classappend="${book.availableCopies > 0} ? 'text-success' : 'text-danger'">
+                                        <span th:text="${book.availableCopies}">4</span> of <span th:text="${book.totalCopies}">5</span> copies available
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <hr class="my-2">
+                                    <div class="text-muted small mb-1">Description / Summary</div>
+                                    <p class="text-secondary mb-0" th:text="${book.description != null && !book.description.isBlank()} ? ${book.description} : 'No description provided for this title.'">
+                                        Summary description goes here.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats summary side card -->
+                <div class="col-12 col-lg-4">
+                    <div class="custom-card">
+                        <div class="custom-card-header">
+                            <h5 class="custom-card-title">
+                                <i class="bi bi-pie-chart text-info"></i> Inventory Status
+                            </h5>
+                        </div>
+                        <div class="custom-card-body p-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Total Stock:</span>
+                                <span class="fw-bold" th:text="${book.totalCopies}">5</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">On Loan:</span>
+                                <span class="fw-bold text-info" th:text="${book.totalCopies - book.availableCopies}">1</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="text-muted">In Library:</span>
+                                <span class="fw-bold text-success" th:text="${book.availableCopies}">4</span>
+                            </div>
+
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar bg-success"
+                                     role="progressbar"
+                                     th:style="'width: ' + ${(book.availableCopies * 100.0) / book.totalCopies} + '%;'"
+                                     aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loan History Table -->
+            <div class="custom-card">
+                <div class="custom-card-header">
+                    <h5 class="custom-card-title">
+                        <i class="bi bi-clock-history text-secondary"></i> Loan & Circulation History
+                    </h5>
+                    <span class="badge bg-secondary" th:text="${#lists.size(issues)} + ' Records'">0 Records</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Borrower</th>
+                                <th>Issue Date</th>
+                                <th>Due Date</th>
+                                <th>Return Date</th>
+                                <th>Status</th>
+                                <th>Late Fee</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:if="${#lists.isEmpty(issues)}">
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    No loans recorded for this book yet.
+                                </td>
+                            </tr>
+                            <tr th:each="issue : ${issues}">
+                                <td>
+                                    <a th:href="@{'/members/view/' + ${issue.member.id}}" class="fw-semibold text-dark text-decoration-none" th:text="${issue.member.name}">Alice Johnson</a>
+                                    <small class="text-muted d-block" th:text="${issue.member.memberCode}">LIB-MEM-001</small>
+                                </td>
+                                <td th:text="${issue.issueDate}">2026-10-20</td>
+                                <td th:text="${issue.dueDate}">2026-11-03</td>
+                                <td th:text="${issue.returnDate != null ? issue.returnDate : '-'}">-</td>
+                                <td>
+                                    <span th:if="${issue.status == 'RETURNED'}" class="badge-status badge-returned">Returned</span>
+                                    <span th:if="${issue.status == 'ISSUED'}" class="badge-status badge-issued">Issued</span>
+                                    <span th:if="${issue.status == 'OVERDUE'}" class="badge-status badge-overdue">Overdue</span>
+                                </td>
+                                <td>
+                                    <span th:if="${issue.lateFee != null && issue.lateFee > 0}" class="text-danger fw-bold" th:text="'$' + ${#numbers.formatDecimal(issue.lateFee, 1, 2)}">$0.00</span>
+                                    <span th:unless="${issue.lateFee != null && issue.lateFee > 0}" class="text-muted">$0.00</span>
+                                </td>
+                                <td class="text-end">
+                                    <button th:if="${issue.status != 'RETURNED'}"
+                                            class="btn btn-sm btn-outline-primary"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#returnModal"
+                                            th:attr="data-issue-id=${issue.id},
+                                                     data-book-title=${book.title},
+                                                     data-member-name=${issue.member.name},
+                                                     data-due-date=${issue.dueDate},
+                                                     data-late-fee=${issue.lateFee}">
+                                        Return
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Return Modal -->
+    <div th:replace="~{fragments/layout :: returnModal}"></div>
+
+    <!-- Scripts -->
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

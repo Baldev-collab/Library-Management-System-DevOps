@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: library-app-service
+  namespace: library-management
+  labels:
+    app: library-app
+    app.kubernetes.io/name: library-management-system
+    app.kubernetes.io/component: backend
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8082
+      targetPort: 8080
+      nodePort: 30088
+      name: http
+  selector:
+    app: library-app

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header(${isEdit} ? 'Edit Member - LibMaster' : 'Register Member - LibMaster')}"></head>
+<body>
+
+    <!-- Sidebar -->
+    <div th:replace="~{fragments/layout :: sidebar('members')}"></div>
+
+    <main class="app-main">
+        <!-- Topbar -->
+        <div th:replace="~{fragments/layout :: topbar(${isEdit} ? 'Edit Member Profile' : 'Register New Library Member')}"></div>
+
+        <div class="app-content">
+            <!-- Flash Message Alerts -->
+            <div th:replace="~{fragments/layout :: alerts}"></div>
+
+            <div class="row justify-content-center">
+                <div class="col-12 col-lg-8">
+                    <div class="custom-card">
+                        <div class="custom-card-header">
+                            <h5 class="custom-card-title">
+                                <i class="bi text-primary" th:classappend="${isEdit} ? 'bi-pencil-square' : 'bi-person-plus-fill'"></i>
+                                <span th:text="${isEdit} ? 'Edit Patron Profile' : 'New Patron Registration'">Member Form</span>
+                            </h5>
+                            <a th:href="@{/members}" class="btn btn-sm btn-secondary-custom">
+                                <i class="bi bi-arrow-left"></i> Back to Directory
+                            </a>
+                        </div>
+                        <div class="custom-card-body p-4">
+                            <form th:action="${isEdit} ? @{'/members/update/' + ${member.id}} : @{/members/save}"
+                                  th:object="${member}"
+                                  method="post"
+                                  novalidate>
+
+                                <div class="row g-3 mb-3">
+                                    <!-- Member Code -->
+                                    <div class="col-12 col-md-6">
+                                        <label for="memberCode" class="form-label">
+                                            Member Code / Card ID <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group has-validation">
+                                            <span class="input-group-text bg-light"><i class="bi bi-card-heading"></i></span>
+                                            <input type="text"
+                                                   class="form-control"
+                                                   id="memberCode"
+                                                   th:field="*{memberCode}"
+                                                   placeholder="e.g. LIB-MEM-101"
+                                                   th:classappend="${#fields.hasErrors('memberCode')} ? 'is-invalid' : ''"
+                                                   required>
+                                            <div class="invalid-feedback" th:if="${#fields.hasErrors('memberCode')}" th:errors="*{memberCode}">
+                                                Member code is required or duplicate.
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Status -->
+                                    <div class="col-12 col-md-6">
+                                        <label for="status" class="form-label">Membership Status <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="status" th:field="*{status}">
+                                            <option value="ACTIVE">ACTIVE</option>
+                                            <option value="SUSPENDED">SUSPENDED</option>
+                                            <option value="INACTIVE">INACTIVE</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Full Name -->
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">
+                                        Full Name <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="name"
+                                           th:field="*{name}"
+                                           placeholder="e.g. Sarah Connor"
+                                           th:classappend="${#fields.hasErrors('name')} ? 'is-invalid' : ''"
+                                           required>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">
+                                        Name is required.
+                                    </div>
+                                </div>
+
+                                <!-- Email & Phone -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-6">
+                                        <label for="email" class="form-label">
+                                            Email Address <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group has-validation">
+                                            <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
+                                            <input type="email"
+                                                   class="form-control"
+                                                   id="email"
+                                                   th:field="*{email}"
+                                                   placeholder="sarah@example.com"
+                                                   th:classappend="${#fields.hasErrors('email')} ? 'is-invalid' : ''"
+                                                   required>
+                                            <div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">
+                                                Please provide a valid unique email.
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 col-md-6">
+                                        <label for="phone" class="form-label">Phone Number</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-telephone"></i></span>
+                                            <input type="text"
+                                                   class="form-control"
+                                                   id="phone"
+                                                   th:field="*{phone}"
+                                                   placeholder="+1-555-0199">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Membership Date & Address -->
+                                <div class="row g-3 mb-4">
+                                    <div class="col-12 col-md-5">
+                                        <label for="membershipDate" class="form-label">Registration Date <span class="text-danger">*</span></label>
+                                        <input type="date"
+                                               class="form-control"
+                                               id="membershipDate"
+                                               th:field="*{membershipDate}"
+                                               required>
+                                    </div>
+
+                                    <div class="col-12 col-md-7">
+                                        <label for="address" class="form-label">Address (Optional)</label>
+                                        <input type="text"
+                                               class="form-control"
+                                               id="address"
+                                               th:field="*{address}"
+                                               placeholder="Street address, City">
+                                    </div>
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                                    <a th:href="@{/members}" class="btn btn-secondary-custom">Cancel</a>
+                                    <button type="submit" class="btn btn-primary-custom">
+                                        <i class="bi bi-check2"></i>
+                                        <span th:text="${isEdit} ? 'Update Member' : 'Register Member'">Save</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

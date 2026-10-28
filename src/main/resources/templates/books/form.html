@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header(${isEdit} ? 'Edit Book - LibMaster' : 'Add New Book - LibMaster')}"></head>
+<body>
+
+    <!-- Sidebar -->
+    <div th:replace="~{fragments/layout :: sidebar('books')}"></div>
+
+    <main class="app-main">
+        <!-- Topbar -->
+        <div th:replace="~{fragments/layout :: topbar(${isEdit} ? 'Edit Book Details' : 'Add New Book to Inventory')}"></div>
+
+        <div class="app-content">
+            <!-- Flash Message Alerts -->
+            <div th:replace="~{fragments/layout :: alerts}"></div>
+
+            <div class="row justify-content-center">
+                <div class="col-12 col-lg-8">
+                    <div class="custom-card">
+                        <div class="custom-card-header">
+                            <h5 class="custom-card-title">
+                                <i class="bi text-primary" th:classappend="${isEdit} ? 'bi-pencil-square' : 'bi-plus-circle-fill'"></i>
+                                <span th:text="${isEdit} ? 'Edit Book Information' : 'New Book Inventory Entry'">Book Form</span>
+                            </h5>
+                            <a th:href="@{/books}" class="btn btn-sm btn-secondary-custom">
+                                <i class="bi bi-arrow-left"></i> Back to Catalog
+                            </a>
+                        </div>
+                        <div class="custom-card-body p-4">
+                            <form th:action="${isEdit} ? @{'/books/update/' + ${book.id}} : @{/books/save}"
+                                  th:object="${book}"
+                                  method="post"
+                                  novalidate>
+
+                                <div class="row g-3 mb-3">
+                                    <!-- ISBN -->
+                                    <div class="col-12 col-md-6">
+                                        <label for="isbn" class="form-label">
+                                            ISBN (International Standard Book Number) <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group has-validation">
+                                            <span class="input-group-text bg-light"><i class="bi bi-upc-scan"></i></span>
+                                            <input type="text"
+                                                   class="form-control"
+                                                   id="isbn"
+                                                   th:field="*{isbn}"
+                                                   placeholder="e.g. 978-0134685991"
+                                                   th:classappend="${#fields.hasErrors('isbn')} ? 'is-invalid' : ''"
+                                                   required>
+                                            <div class="invalid-feedback" th:if="${#fields.hasErrors('isbn')}" th:errors="*{isbn}">
+                                                Invalid or duplicate ISBN.
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">Must be a unique 10 or 13-digit ISBN.</small>
+                                    </div>
+
+                                    <!-- Category -->
+                                    <div class="col-12 col-md-6">
+                                        <label for="category" class="form-label">
+                                            Category / Subject <span class="text-danger">*</span>
+                                        </label>
+                                        <input list="categoriesList"
+                                               class="form-control"
+                                               id="category"
+                                               th:field="*{category}"
+                                               placeholder="e.g. Programming, Cloud, DevOps"
+                                               th:classappend="${#fields.hasErrors('category')} ? 'is-invalid' : ''"
+                                               required>
+                                        <datalist id="categoriesList">
+                                            <option th:each="cat : ${categories}" th:value="${cat}"></option>
+                                            <option value="Programming"></option>
+                                            <option value="Software Engineering"></option>
+                                            <option value="Cloud & DevOps"></option>
+                                            <option value="Database Systems"></option>
+                                            <option value="System Architecture"></option>
+                                            <option value="Cybersecurity"></option>
+                                        </datalist>
+                                        <div class="invalid-feedback" th:if="${#fields.hasErrors('category')}" th:errors="*{category}">
+                                            Category is required.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Title -->
+                                <div class="mb-3">
+                                    <label for="title" class="form-label">
+                                        Book Title <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="title"
+                                           th:field="*{title}"
+                                           placeholder="e.g. Designing Data-Intensive Applications"
+                                           th:classappend="${#fields.hasErrors('title')} ? 'is-invalid' : ''"
+                                           required>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('title')}" th:errors="*{title}">
+                                        Title is required.
+                                    </div>
+                                </div>
+
+                                <!-- Author -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-8">
+                                        <label for="author" class="form-label">
+                                            Author(s) <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text"
+                                               class="form-control"
+                                               id="author"
+                                               th:field="*{author}"
+                                               placeholder="e.g. Martin Kleppmann"
+                                               th:classappend="${#fields.hasErrors('author')} ? 'is-invalid' : ''"
+                                               required>
+                                        <div class="invalid-feedback" th:if="${#fields.hasErrors('author')}" th:errors="*{author}">
+                                            Author name is required.
+                                        </div>
+                                    </div>
+
+                                    <!-- Total Copies -->
+                                    <div class="col-12 col-md-4">
+                                        <label for="totalCopies" class="form-label">
+                                            Total Copies <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="number"
+                                               min="1"
+                                               class="form-control"
+                                               id="totalCopies"
+                                               th:field="*{totalCopies}"
+                                               th:classappend="${#fields.hasErrors('totalCopies')} ? 'is-invalid' : ''"
+                                               required>
+                                        <div class="invalid-feedback" th:if="${#fields.hasErrors('totalCopies')}" th:errors="*{totalCopies}">
+                                            Minimum 1 copy required.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Description -->
+                                <div class="mb-4">
+                                    <label for="description" class="form-label">Summary / Description (Optional)</label>
+                                    <textarea class="form-control"
+                                              id="description"
+                                              th:field="*{description}"
+                                              rows="4"
+                                              placeholder="Brief synopsis, edition details, or notes..."></textarea>
+                                </div>
+
+                                <!-- Submit & Cancel -->
+                                <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                                    <a th:href="@{/books}" class="btn btn-secondary-custom">Cancel</a>
+                                    <button type="submit" class="btn btn-primary-custom">
+                                        <i class="bi bi-check2"></i>
+                                        <span th:text="${isEdit} ? 'Update Book' : 'Save to Inventory'">Save</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
