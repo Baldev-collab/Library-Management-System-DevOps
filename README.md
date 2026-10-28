@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Automated Library Management System (LibMaster OS)
 
 An end-to-end, enterprise-grade **Automated Library Management System** built with **Spring Boot 3**, **Thymeleaf**, **MySQL 8.4**, **Docker**, **Kubernetes (Docker Desktop)**, and an automated declarative **Jenkins CI/CD Pipeline**.
@@ -389,3 +390,6 @@ mvn test
 | **Actuator Liveness Probe** | HTTP GET | [http://localhost:8082/actuator/health/liveness](http://localhost:8082/actuator/health/liveness) |
 | **Actuator Readiness Probe** | HTTP GET | [http://localhost:8082/actuator/health/readiness](http://localhost:8082/actuator/health/readiness) |
 | **Jenkins Dashboard** | Browser | [http://localhost:8080](http://localhost:8080) |
+=======
+# Library-Management-System-DevOps
+>>>>>>> 8f78f66c3ecd8e6881a96d3cb9d94476aa8b9d6b
