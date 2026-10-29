@@ -12,7 +12,7 @@ pipeline {
         // Fallback search path for Docker Desktop on Windows if not already in system PATH
         DOCKER_BIN_DIR = 'C:\\Users\\balad\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin'
         // Kubernetes configuration: uses Jenkins Global Environment Variable KUBECONFIG if set,
-        // otherwise falls back to the local user's .kube\config path
+        // otherwise falls back to the local user's .kube/config path
         KUBECONFIG = "${env.KUBECONFIG ?: 'C:\\Users\\balad\\.kube\\config'}"
     }
 
@@ -104,11 +104,9 @@ pipeline {
                     )
 
                     echo [STEP 1/4] Checking kubeconfig location...
-                    if not defined KUBECONFIG set "KUBECONFIG=C:\Users\balad\.kube\config"
+                    if not defined KUBECONFIG set "KUBECONFIG=C:\\Users\\balad\\.kube\\config"
                     if not exist "%KUBECONFIG%" (
-                        if exist "C:\Users\balad\.kube\config" (
-                            set "KUBECONFIG=C:\Users\balad\.kube\config"
-                        )
+                        if exist "C:\\Users\\balad\\.kube\\config" set "KUBECONFIG=C:\\Users\\balad\\.kube\\config"
                     )
 
                     if not exist "%KUBECONFIG%" (
@@ -161,7 +159,7 @@ pipeline {
                         )
                     )
 
-                    if not defined KUBECONFIG set "KUBECONFIG=C:\Users\balad\.kube\config"
+                    if not defined KUBECONFIG set "KUBECONFIG=C:\\Users\\balad\\.kube\\config"
 
                     echo Validating all YAML manifests in k8s/ against cluster schema...
                     set "VALIDATION_FAILED=0"
@@ -197,7 +195,7 @@ pipeline {
                         )
                     )
 
-                    if not defined KUBECONFIG set "KUBECONFIG=C:\Users\balad\.kube\config"
+                    if not defined KUBECONFIG set "KUBECONFIG=C:\\Users\\balad\\.kube\\config"
 
                     echo Applying Kubernetes manifests in sequence...
                     kubectl apply -f k8s/namespace.yaml
@@ -243,7 +241,7 @@ pipeline {
                         )
                     )
 
-                    if not defined KUBECONFIG set "KUBECONFIG=C:\Users\balad\.kube\config"
+                    if not defined KUBECONFIG set "KUBECONFIG=C:\\Users\\balad\\.kube\\config"
 
                     echo Checking MySQL deployment rollout...
                     kubectl rollout status deployment/library-mysql -n %K8S_NAMESPACE% --timeout=180s
