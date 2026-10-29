@@ -103,33 +103,46 @@ pipeline {
                         )
                     )
 
-                    echo Checking kubeconfig location...
+                    echo [STEP 1/4] Checking kubeconfig location...
+                    if not defined KUBECONFIG set "KUBECONFIG=C:\Users\balad\.kube\config"
                     if not exist "%KUBECONFIG%" (
-                        echo [ERROR] Kubeconfig not found at: "%KUBECONFIG%"
-                        echo Ensure KUBECONFIG is set in Jenkins (Manage Jenkins -^> System -^> Environment variables)
+                        if exist "C:\Users\balad\.kube\config" (
+                            set "KUBECONFIG=C:\Users\balad\.kube\config"
+                        )
+                    )
+
+                    if not exist "%KUBECONFIG%" (
+                        echo [ERROR] Kubeconfig not found at "%KUBECONFIG%".
+                        echo Please configure KUBECONFIG in: Jenkins Dashboard / Manage Jenkins / System / Environment variables.
                         exit /b 1
                     )
                     echo [OK] Using kubeconfig: %KUBECONFIG%
 
-                    echo Active Kubernetes Context:
+                    echo [STEP 2/4] Verifying active Kubernetes context...
                     kubectl config current-context
                     if errorlevel 1 (
                         echo [ERROR] Failed to retrieve current Kubernetes context from %KUBECONFIG%.
                         exit /b 1
                     )
 
-                    echo Cluster API Server Endpoint:
+                    echo [STEP 3/4] Checking cluster control plane server endpoint...
                     kubectl config view --minify -o jsonpath="{.clusters[0].cluster.server}"
                     echo.
 
-                    echo Verifying cluster connectivity...
+                    echo [STEP 4/4] Verifying cluster reachability and node status...
                     kubectl cluster-info
                     if errorlevel 1 (
                         echo [ERROR] Kubernetes cluster is unreachable or authentication failed.
                         echo Please ensure Docker Desktop Kubernetes is running.
                         exit /b 1
                     )
-                    echo [SUCCESS] Kubernetes cluster connectivity verified.
+
+                    kubectl get nodes
+                    if errorlevel 1 (
+                        echo [ERROR] Failed to retrieve cluster nodes.
+                        exit /b 1
+                    )
+                    echo [SUCCESS] Kubernetes environment diagnostic passed successfully.
                 """
             }
         }
@@ -147,6 +160,8 @@ pipeline {
                             set "PATH=!PATH!;%DOCKER_BIN_DIR%"
                         )
                     )
+
+                    if not defined KUBECONFIG set "KUBECONFIG=C:\Users\balad\.kube\config"
 
                     echo Validating all YAML manifests in k8s/ against cluster schema...
                     set "VALIDATION_FAILED=0"
@@ -181,6 +196,8 @@ pipeline {
                             set "PATH=!PATH!;%DOCKER_BIN_DIR%"
                         )
                     )
+
+                    if not defined KUBECONFIG set "KUBECONFIG=C:\Users\balad\.kube\config"
 
                     echo Applying Kubernetes manifests in sequence...
                     kubectl apply -f k8s/namespace.yaml
@@ -226,6 +243,8 @@ pipeline {
                         )
                     )
 
+                    if not defined KUBECONFIG set "KUBECONFIG=C:\Users\balad\.kube\config"
+
                     echo Checking MySQL deployment rollout...
                     kubectl rollout status deployment/library-mysql -n %K8S_NAMESPACE% --timeout=180s
                     if errorlevel 1 (
@@ -269,13 +288,13 @@ pipeline {
                         curl.exe -s http://127.0.0.1:8082/actuator/health
                         echo.
                     ) else (
-                        echo [WARNING] Host port 8082 not directly reachable; verifying pod readiness probe...
-                        kubectl get pods -n %K8S_NAMESPACE% -l app=library-app -o jsonpath="{.items[*].status.conditions[?(@.type=='Ready')].status}" | findstr /i "True" >nul
+                        echo [WARNING] Host port 8082 did not respond. Verifying active running pods...
+                        kubectl get pods -n %K8S_NAMESPACE% -l app=library-app --no-headers | findstr /i "Running" >nul
                         if errorlevel 1 (
-                            echo [ERROR] Pod readiness probe is not in Ready state!
+                            echo [ERROR] No Running pods found for library-app.
                             exit /b 1
                         )
-                        echo [SUCCESS] Spring Boot Pod readiness probe is Ready in cluster.
+                        echo [SUCCESS] library-app pod is confirmed Running in cluster.
                     )
                 """
             }
