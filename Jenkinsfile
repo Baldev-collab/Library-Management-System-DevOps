@@ -11,6 +11,9 @@ pipeline {
         K8S_NAMESPACE = 'library-management'
         // Fallback search path for Docker Desktop on Windows if not already in system PATH
         DOCKER_BIN_DIR = 'C:\\Users\\balad\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin'
+        // Kubernetes configuration: uses Jenkins Global Environment Variable KUBECONFIG if set,
+        // otherwise falls back to the local user's .kube\config path
+        KUBECONFIG = "${env.KUBECONFIG ?: 'C:\\Users\\balad\\.kube\\config'}"
     }
 
     stages {
@@ -83,9 +86,9 @@ pipeline {
             }
         }
 
-        stage('Validate Kubernetes Manifests') {
+        stage('Diagnose Kubernetes Environment') {
             steps {
-                echo 'Validating Kubernetes manifests in k8s/ directory via dry-run...'
+                echo 'Diagnosing Kubernetes context and cluster reachability...'
                 bat """
                     @echo off
                     setlocal EnableDelayedExpansion
@@ -95,13 +98,72 @@ pipeline {
                         if exist "%DOCKER_BIN_DIR%\\kubectl.exe" (
                             set "PATH=!PATH!;%DOCKER_BIN_DIR%"
                         ) else (
-                            echo [WARNING] kubectl.exe not found in PATH or %DOCKER_BIN_DIR%.
+                            echo [ERROR] kubectl.exe not found in PATH or %DOCKER_BIN_DIR%.
                             exit /b 1
                         )
                     )
 
-                    echo Validating manifests using dry-run (client-side)...
-                    kubectl apply --dry-run=client -f k8s/
+                    echo Checking kubeconfig location...
+                    if not exist "%KUBECONFIG%" (
+                        echo [ERROR] Kubeconfig not found at: "%KUBECONFIG%"
+                        echo Ensure KUBECONFIG is set in Jenkins (Manage Jenkins -^> System -^> Environment variables)
+                        exit /b 1
+                    )
+                    echo [OK] Using kubeconfig: %KUBECONFIG%
+
+                    echo Active Kubernetes Context:
+                    kubectl config current-context
+                    if errorlevel 1 (
+                        echo [ERROR] Failed to retrieve current Kubernetes context from %KUBECONFIG%.
+                        exit /b 1
+                    )
+
+                    echo Cluster API Server Endpoint:
+                    kubectl config view --minify -o jsonpath="{.clusters[0].cluster.server}"
+                    echo.
+
+                    echo Verifying cluster connectivity...
+                    kubectl cluster-info
+                    if errorlevel 1 (
+                        echo [ERROR] Kubernetes cluster is unreachable or authentication failed.
+                        echo Please ensure Docker Desktop Kubernetes is running.
+                        exit /b 1
+                    )
+                    echo [SUCCESS] Kubernetes cluster connectivity verified.
+                """
+            }
+        }
+
+        stage('Validate Kubernetes Manifests') {
+            steps {
+                echo 'Validating Kubernetes manifests in k8s/ directory via OpenAPI schema dry-run...'
+                bat """
+                    @echo off
+                    setlocal EnableDelayedExpansion
+
+                    where kubectl >nul 2>&1
+                    if errorlevel 1 (
+                        if exist "%DOCKER_BIN_DIR%\\kubectl.exe" (
+                            set "PATH=!PATH!;%DOCKER_BIN_DIR%"
+                        )
+                    )
+
+                    echo Validating all YAML manifests in k8s/ against cluster schema...
+                    set "VALIDATION_FAILED=0"
+                    for %%F in (k8s\\*.yaml) do (
+                        echo Validating %%F...
+                        kubectl apply --dry-run=client -f "%%F"
+                        if errorlevel 1 (
+                            echo [ERROR] Schema validation failed for %%F
+                            set "VALIDATION_FAILED=1"
+                        )
+                    )
+
+                    if !VALIDATION_FAILED! neq 0 (
+                        echo [ERROR] One or more Kubernetes manifests failed validation.
+                        exit /b 1
+                    )
+                    echo [SUCCESS] All Kubernetes manifests validated successfully.
                 """
             }
         }
@@ -120,22 +182,32 @@ pipeline {
                         )
                     )
 
-                    kubectl cluster-info >nul 2>&1
-                    if errorlevel 1 (
-                        echo [ERROR] Kubernetes cluster is not reachable from this environment.
-                        echo Please ensure Docker Desktop Kubernetes is running.
-                        exit /b 1
-                    )
-
                     echo Applying Kubernetes manifests in sequence...
                     kubectl apply -f k8s/namespace.yaml
+                    if errorlevel 1 ( echo [ERROR] Failed applying namespace.yaml & exit /b 1 )
+
                     kubectl apply -f k8s/mysql-secret.yaml
+                    if errorlevel 1 ( echo [ERROR] Failed applying mysql-secret.yaml & exit /b 1 )
+
                     kubectl apply -f k8s/configmap.yaml
+                    if errorlevel 1 ( echo [ERROR] Failed applying configmap.yaml & exit /b 1 )
+
                     kubectl apply -f k8s/mysql-pvc.yaml
+                    if errorlevel 1 ( echo [ERROR] Failed applying mysql-pvc.yaml & exit /b 1 )
+
                     kubectl apply -f k8s/mysql-service.yaml
+                    if errorlevel 1 ( echo [ERROR] Failed applying mysql-service.yaml & exit /b 1 )
+
                     kubectl apply -f k8s/mysql-deployment.yaml
+                    if errorlevel 1 ( echo [ERROR] Failed applying mysql-deployment.yaml & exit /b 1 )
+
                     kubectl apply -f k8s/app-service.yaml
+                    if errorlevel 1 ( echo [ERROR] Failed applying app-service.yaml & exit /b 1 )
+
                     kubectl apply -f k8s/app-deployment.yaml
+                    if errorlevel 1 ( echo [ERROR] Failed applying app-deployment.yaml & exit /b 1 )
+
+                    echo [SUCCESS] All manifests applied successfully.
                 """
             }
         }
@@ -156,13 +228,55 @@ pipeline {
 
                     echo Checking MySQL deployment rollout...
                     kubectl rollout status deployment/library-mysql -n %K8S_NAMESPACE% --timeout=180s
+                    if errorlevel 1 (
+                        echo [ERROR] MySQL deployment rollout failed or timed out.
+                        echo Displaying pod diagnostics:
+                        kubectl describe pods -n %K8S_NAMESPACE% -l app=library-mysql
+                        kubectl logs -n %K8S_NAMESPACE% -l app=library-mysql --tail=50
+                        exit /b 1
+                    )
 
                     echo Checking Spring Boot App deployment rollout...
                     kubectl rollout status deployment/library-app -n %K8S_NAMESPACE% --timeout=180s
+                    if errorlevel 1 (
+                        echo [ERROR] Spring Boot application rollout failed or timed out.
+                        echo Displaying pod diagnostics:
+                        kubectl describe pods -n %K8S_NAMESPACE% -l app=library-app
+                        kubectl logs -n %K8S_NAMESPACE% -l app=library-app --tail=50
+                        exit /b 1
+                    )
 
                     echo [SUCCESS] Deployments verified! Active pods and services:
                     kubectl get pods -n %K8S_NAMESPACE% -o wide
                     kubectl get svc -n %K8S_NAMESPACE%
+
+                    echo Verifying application health endpoint...
+                    set "HEALTH_OK=0"
+                    for /L %%i in (1,1,6) do (
+                        if !HEALTH_OK! equ 0 (
+                            curl.exe -s -f http://127.0.0.1:8082/actuator/health >nul 2>&1
+                            if not errorlevel 1 (
+                                set "HEALTH_OK=1"
+                            ) else (
+                                echo Attempt %%i/6: Waiting for health endpoint to respond...
+                                timeout /t 5 /nobreak >nul 2>&1
+                            )
+                        )
+                    )
+
+                    if !HEALTH_OK! equ 1 (
+                        echo [SUCCESS] Application health endpoint responded UP:
+                        curl.exe -s http://127.0.0.1:8082/actuator/health
+                        echo.
+                    ) else (
+                        echo [WARNING] Host port 8082 not directly reachable; verifying pod readiness probe...
+                        kubectl get pods -n %K8S_NAMESPACE% -l app=library-app -o jsonpath="{.items[*].status.conditions[?(@.type=='Ready')].status}" | findstr /i "True" >nul
+                        if errorlevel 1 (
+                            echo [ERROR] Pod readiness probe is not in Ready state!
+                            exit /b 1
+                        )
+                        echo [SUCCESS] Spring Boot Pod readiness probe is Ready in cluster.
+                    )
                 """
             }
         }
@@ -172,7 +286,7 @@ pipeline {
         success {
             echo '================================================================='
             echo 'Automated Library Management System CI/CD Pipeline SUCCEEDED!'
-            echo 'Application is live on Kubernetes NodePort: http://localhost:30088'
+            echo 'Application is live on Kubernetes LoadBalancer: http://localhost:8082'
             echo '================================================================='
         }
         failure {
